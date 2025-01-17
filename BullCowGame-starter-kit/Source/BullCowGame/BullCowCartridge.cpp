@@ -16,8 +16,6 @@ void UBullCowCartridge::BeginPlay() // When the game starts
     {
         return Word.Len() >= 4 && Word.Len() <= 6 && IsIsogram(Word);
     });
-    //Debug
-    PrintLine(TEXT("Available Isograms is: %i"), Isograms.Num());
 
     // Setup List of words that can used. Only needs to be ONCE. Uses the header
     //Isograms = GetValidWords(RandomWords);
@@ -59,8 +57,7 @@ void UBullCowCartridge::StartNewGame()
 
 void UBullCowCartridge::SetupGame()
 {
-    //set difficulty?
-    //Set HiddenWord - TODO make it random (create a list of usable words)
+    //TODO - set difficulty?
     HiddenWord = ChooseRandomWord(Isograms);
     Lives = HiddenWord.Len();
     bIsGameOver = false;
@@ -85,7 +82,7 @@ void UBullCowCartridge::EndGame(const bool& IsWinner)
     }
     else
     {
-        PrintLine(TEXT("Oof. No recovering from that. \nHave fun in the afterlife."));
+        PrintLine(TEXT("Oof. No recovering from that."));
         PrintLine(TEXT("The hidden word was: %s"), *HiddenWord);
     }
     PrintLine(TEXT("Would you like try again?(y/n)"));
@@ -117,31 +114,28 @@ void UBullCowCartridge::HandlePlayerGuess(const FString& Guess)
         return;
     }
     
-    int32 Bulls, Cows;
-    GetBullsCows(Guess, OUT Bulls, OUT Cows);
+    FBullCowCount Count;
+    Count = GetBullsCows(Guess);
 
     PrintLine(TEXT("Let's see how many you rounded up."));
-    PrintLine(TEXT("Bulls: %i, Cows: %i"), Bulls, Cows);
-    PrintLine(TEXT("You have %i lives left."), Lives);
-    PrintLine(TEXT("Let's try that again.\n"));
-
+    PrintLine(TEXT("Bulls: %i, Cows: %i"), Count.Bulls, Count.Cows);
+    PrintLine(TEXT("You have %i lives left.\n"), Lives);
 }
 
-void UBullCowCartridge::GetBullsCows(const FString& Guess, int32& BullCount, int32& CowCount)
+FBullCowCount UBullCowCartridge::GetBullsCows(const FString& Guess) const
 {
-    BullCount = 0;
-    CowCount = 0;
+    FBullCowCount BCCount;
     for(int32 I = 0; I < Guess.Len(); I++)
     {
         if(Guess[I] == HiddenWord[I])
         {
-            BullCount++;
+            BCCount.Bulls++;
             continue;
         }
         
         if(HiddenWord.Contains(FString(1, &Guess[I])))
         {
-            CowCount++;
+            BCCount.Cows++;
             continue;
         }
 
@@ -150,11 +144,12 @@ void UBullCowCartridge::GetBullsCows(const FString& Guess, int32& BullCount, int
         {
             if(Guess[I] == HiddenWord[J])
             {
-                CowCount++;
+                BCCount.Cows++;
                 break;
             }
         } */
     }
+    return BCCount;
 }
 
 bool UBullCowCartridge::IsGuessValid(const FString& Guess) const

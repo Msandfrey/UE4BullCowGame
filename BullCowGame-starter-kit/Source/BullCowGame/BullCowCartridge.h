@@ -25,9 +25,9 @@ class BULLCOWGAME_API UBullCowCartridge : public UCartridge
 	void PrintWelcomeMessage();
 	void EndGame(const bool& IsWinner);
 	void HandlePlayerGuess(const FString& Guess);
-	void GetBullsCows(const FString& Guess, int32& BullCount, int32& CowCount);
 	bool IsGuessValid(const FString& Guess) const;
 	static bool IsIsogram(const FString& Word);
+	FBullCowCount GetBullsCows(const FString& Guess) const;
 	FString ChooseRandomWord(const TArray<FString>& WordList) const;
 	TArray<FString> GetValidWords(const TArray<FString>& SourceWords) const;
 
