@@ -1,9 +1,26 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "BullCowCartridge.h"
+#include "HiddenWordList.h"
+
+//for using text file
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 void UBullCowCartridge::BeginPlay() // When the game starts
 {
     Super::BeginPlay();
+
+    // Words from text file. Not used now
+    const FString WordListPath = FPaths::ProjectContentDir() / TEXT("WordLists/HiddenWordList.txt");
+    FFileHelper::LoadFileToStringArrayWithPredicate(Isograms, *WordListPath, [](const FString& Word)
+    {
+        return Word.Len() >= 4 && Word.Len() <= 6 && IsIsogram(Word);
+    });
+    //Debug
+    PrintLine(TEXT("Available Isograms is: %i"), Isograms.Num());
+
+    // Setup List of words that can used. Only needs to be ONCE. Uses the header
+    //Isograms = GetValidWords(RandomWords);
 
     StartNewGame();
 }
@@ -11,10 +28,8 @@ void UBullCowCartridge::BeginPlay() // When the game starts
 void UBullCowCartridge::OnInput(const FString& Input) // When the player hits enter
 {
     Input.ToLower();
-
-    /*
-        HANDLE GAME OVER -----------------------------
-     */
+    
+    // HANDLE GAME OVER -----------------------------
     if(bIsGameOver)
     {
         if(Input == "y")
@@ -32,9 +47,7 @@ void UBullCowCartridge::OnInput(const FString& Input) // When the player hits en
     }
     //-------------------------------------------------
 
-    /*
-        HANDLE PLAYER GUESS
-     */
+    // HANDLE PLAYER GUESS-----------------------------
     HandlePlayerGuess(Input);
 }
 
@@ -48,7 +61,7 @@ void UBullCowCartridge::SetupGame()
 {
     //set difficulty?
     //Set HiddenWord - TODO make it random (create a list of usable words)
-    HiddenWord = ChooseHiddenWord();
+    HiddenWord = ChooseRandomWord(Isograms);
     Lives = HiddenWord.Len();
     bIsGameOver = false;
 }
@@ -63,7 +76,7 @@ void UBullCowCartridge::PrintWelcomeMessage()
     PrintLine(TEXT("Try any %i letter word and press ENTER..."), HiddenWord.Len());
 }
 
-void UBullCowCartridge::EndGame(bool IsWinner)
+void UBullCowCartridge::EndGame(const bool& IsWinner)
 {
     bIsGameOver = true;
     if(IsWinner)
@@ -78,7 +91,7 @@ void UBullCowCartridge::EndGame(bool IsWinner)
     PrintLine(TEXT("Would you like try again?(y/n)"));
 }
 
-void UBullCowCartridge::HandlePlayerGuess(FString Guess)
+void UBullCowCartridge::HandlePlayerGuess(const FString& Guess)
 {
     //Check player's guess
     if(Guess.Equals(HiddenWord))
@@ -91,29 +104,60 @@ void UBullCowCartridge::HandlePlayerGuess(FString Guess)
     //Check if input is valid
     if(!IsGuessValid(Guess))
     {
-        PrintLine(TEXT("Try again."));  
+        PrintLine(TEXT("Try again.\n"));  
         return;
     }
 
     //TODO - calculate bulls and cows
     //remove a life
     Lives--;
-    //check if dead
     if(Lives <= 0)
     {
         EndGame(false);
         return;
     }
-    //if not, PrintLine how many lives you have left
-    else
+    
+    int32 Bulls, Cows;
+    GetBullsCows(Guess, OUT Bulls, OUT Cows);
+
+    PrintLine(TEXT("Let's see how many you rounded up."));
+    PrintLine(TEXT("Bulls: %i, Cows: %i"), Bulls, Cows);
+    PrintLine(TEXT("You have %i lives left."), Lives);
+    PrintLine(TEXT("Let's try that again.\n"));
+
+}
+
+void UBullCowCartridge::GetBullsCows(const FString& Guess, int32& BullCount, int32& CowCount)
+{
+    BullCount = 0;
+    CowCount = 0;
+    for(int32 I = 0; I < Guess.Len(); I++)
     {
-        PrintLine(TEXT("Nice try. You got trampled..."));
-        PrintLine(TEXT("Let's try that again"));
-        PrintLine(TEXT("You have %i lives left."), Lives);
+        if(Guess[I] == HiddenWord[I])
+        {
+            BullCount++;
+            continue;
+        }
+        
+        if(HiddenWord.Contains(FString(1, &Guess[I])))
+        {
+            CowCount++;
+            continue;
+        }
+
+        //Udemy way
+        /* for(int32 J = 0; J < HiddenWord.Len(); J++)
+        {
+            if(Guess[I] == HiddenWord[J])
+            {
+                CowCount++;
+                break;
+            }
+        } */
     }
 }
 
-const bool UBullCowCartridge::IsGuessValid(FString Guess)
+bool UBullCowCartridge::IsGuessValid(const FString& Guess) const
 {
     int32 HiddenLength = HiddenWord.Len();
     if(Guess.Len() != HiddenLength)
@@ -129,24 +173,23 @@ const bool UBullCowCartridge::IsGuessValid(FString Guess)
     return true;
 }
 
-const bool UBullCowCartridge::IsIsogram(FString Word)
+bool UBullCowCartridge::IsIsogram(const FString& Word) 
 {
     //keep track of letters to make sure there are no repeats
     Word.ToLower();
     //My Way------------------(TODO - look up which is faster computation wise)
-    /* FString Temp = TEXT("");
-    for(int32 i = 0; i < Word.Len(); i++)
+    FString Temp = TEXT("");
+    for(int32 I = 0; I < Word.Len(); I++)
     {
-        FString Letter = FString(1, &Word[i]);
-        if(Temp.Contains(Letter))
+        if(Temp.Contains(FString(1, &Word[I])))
         {
             return false;
         }
-        Temp.Append(Letter);
-    } */
+        Temp.AppendChar(Word[I]);
+    }
 
     //Udemy Way
-    for(int32 Index = 0; Index < Word.Len() - 1; Index++)
+    /* for(int32 Index = 0; Index < Word.Len() - 1; Index++)
     {
         for(int32 Comparison = Index + 1; Comparison < Word.Len(); Comparison++)
         {
@@ -155,13 +198,29 @@ const bool UBullCowCartridge::IsIsogram(FString Word)
                 return false;
             }
         }
-    }
+    } */
 
     return true;
 }
 
-FString UBullCowCartridge::ChooseHiddenWord()
+FString UBullCowCartridge::ChooseRandomWord(const TArray<FString>& WordList) const
 {
-    //TODO - choose a random word
-    return TEXT("guess");
+    int32 RandomIndex = FMath::RandRange(0, WordList.Num() - 1);
+    return WordList[RandomIndex];
+}
+
+TArray<FString> UBullCowCartridge::GetValidWords(const TArray<FString>& SourceWords) const
+{
+    TArray<FString> Isograms;
+    for(FString Word : SourceWords)
+    {
+        if(Word.Len() >= 4 && Word.Len() <= 8)//TODO - magic numbers MIN_WORD_LEN and MAX_WORD_LEN
+        {
+            if(IsIsogram(Word))
+            {
+                Isograms.Emplace(Word);
+            }
+        }
+    }
+    return Isograms;
 }
